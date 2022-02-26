@@ -121,10 +121,6 @@ def jacfwd(
   input_coloring, ncolors = _greedy_color(connectivity, coloring_strategy)
   input_coloring = jnp.asarray(input_coloring)
   assert input_coloring.size == sparsity.shape[1]
-
-  projection_matrix = (
-      jnp.arange(ncolors)[jnp.newaxis, :] == input_coloring[:, jnp.newaxis])
-  projection_matrix = projection_matrix.astype(jnp.float32)
   
   basis = (
       jnp.arange(ncolors)[jnp.newaxis, :] == input_coloring[:, jnp.newaxis])
