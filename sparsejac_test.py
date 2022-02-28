@@ -28,6 +28,8 @@ class JacrevTest(unittest.TestCase):
       data = jnp.ones((5, 5))
       indices = jnp.arange(5)[:, jnp.newaxis]
       invalid_sparsity = jsparse.BCOO((data, indices), shape=(5, 5))
+      assert invalid_sparsity.ndim == 2
+      assert invalid_sparsity.n_sparse == 1
       sparsejac.jacrev(lambda x: x, invalid_sparsity)
 
   def test_input_shape_validation(self):
@@ -139,6 +141,8 @@ class JacfwdTest(unittest.TestCase):
       data = jnp.ones((5, 5))
       indices = jnp.arange(5)[:, jnp.newaxis]
       invalid_sparsity = jsparse.BCOO((data, indices), shape=(5, 5))
+      assert invalid_sparsity.ndim == 2
+      assert invalid_sparsity.n_sparse == 1
       sparsejac.jacfwd(lambda x: x, invalid_sparsity)
 
   def test_input_shape_validation(self):
