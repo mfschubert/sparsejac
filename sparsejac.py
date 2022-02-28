@@ -44,7 +44,11 @@ def jacrev(
   """
   if sparsity.ndim != 2:
     raise ValueError(
-        f'`sparsity` must be rank-2, but got shape of {sparsity.shape}')
+        f'`sparsity` must be rank-2, but got shape of {sparsity.shape}.')
+  if sparsity.n_sparse != 2:
+    raise ValueError(
+        f'`sparsity.n_sparse` must be 2, but got a value of '
+        f'{sparsity.n_sparse}.')
   
   # Identify the structurally-independent elements of `fn` output, i.e. obtain
   # the coloring of the output. Here we must use `scipy` sparse matrices.
@@ -111,7 +115,11 @@ def jacfwd(
   """
   if sparsity.ndim != 2:
     raise ValueError(
-        f'`sparsity` must be rank-2, but got shape of {sparsity.shape}')
+        f'`sparsity` must be rank-2, but got shape of {sparsity.shape}.')
+  if sparsity.n_sparse != 2:
+    raise ValueError(
+        f'`sparsity.n_sparse` must be 2, but got a value of '
+        f'{sparsity.n_sparse}.')
   
   # Identify the structurally-independent elements of `fn` output, i.e. obtain
   # the coloring of the output. Here we must use `scipy` sparse matrices.

@@ -22,6 +22,14 @@ class JacrevTest(unittest.TestCase):
       invalid_sparsity = jsparse.BCOO.fromdense(jnp.ones((5, 5, 5)))
       sparsejac.jacrev(lambda x: x, invalid_sparsity)
 
+  def test_sparsity_n_sparse_validation(self):
+    with self.assertRaisesRegex(
+        ValueError, '`sparsity.n_sparse` must be 2, but got a value of'):
+      data = jnp.ones((5, 5))
+      indices = jnp.arange(5)[:, jnp.newaxis]
+      invalid_sparsity = jsparse.BCOO((data, indices), shape=(5, 5))
+      sparsejac.jacrev(lambda x: x, invalid_sparsity)
+
   def test_input_shape_validation(self):
     sparsity = jsparse.BCOO.fromdense(jnp.eye(_SIZE))
     jacfn = sparsejac.jacrev(lambda x: x, sparsity)
@@ -123,6 +131,14 @@ class JacfwdTest(unittest.TestCase):
     with self.assertRaisesRegex(
         ValueError, '`sparsity` must be rank-2, but got shape'):
       invalid_sparsity = jsparse.BCOO.fromdense(jnp.ones((5, 5, 5)))
+      sparsejac.jacfwd(lambda x: x, invalid_sparsity)
+
+  def test_sparsity_n_sparse_validation(self):
+    with self.assertRaisesRegex(
+        ValueError, '`sparsity.n_sparse` must be 2, but got a value of'):
+      data = jnp.ones((5, 5))
+      indices = jnp.arange(5)[:, jnp.newaxis]
+      invalid_sparsity = jsparse.BCOO((data, indices), shape=(5, 5))
       sparsejac.jacfwd(lambda x: x, invalid_sparsity)
 
   def test_input_shape_validation(self):
