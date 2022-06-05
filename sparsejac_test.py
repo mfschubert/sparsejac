@@ -47,6 +47,12 @@ class JacrevTest(unittest.TestCase):
         ValueError, '`fn\(x\)` must be rank-1 with size matching'):
       jacfn(jnp.ones(_SIZE))
 
+  def test_argnums_validation(self):
+    with self.assertRaisesRegex(
+        ValueError, '`argnums` must be an integer, but got'):
+      sparsity = jsparse.BCOO.fromdense(jnp.eye(_SIZE))
+      sparsejac.jacrev(lambda x: x, sparsity, argnums=(0, 1))
+
   def test_diagonal(self):
     fn = lambda x: x**2
     sparsity = jsparse.BCOO.fromdense(jnp.eye(_SIZE))
@@ -126,6 +132,52 @@ class JacrevTest(unittest.TestCase):
     actual = sparsejac.jacrev(fn, sparsity)(x_flat)
     onp.testing.assert_array_equal(expected, actual.todense())
 
+  def test_argnums(self):
+
+    def fn(x, y, z):
+      convolved = jnp.convolve(x, jnp.asarray([1., -2., 1.]), mode='same')**2
+      return y * convolved + z
+    
+    x = jax.random.uniform(jax.random.PRNGKey(0), shape=(_SIZE,))
+    y = jax.random.uniform(jax.random.PRNGKey(1), shape=(_SIZE,))
+    z = jax.random.uniform(jax.random.PRNGKey(2), shape=(_SIZE,))
+
+    i, j = jnp.meshgrid(jnp.arange(_SIZE), jnp.arange(_SIZE), indexing='ij')
+    sparsity = (i == j) | ((i - 1) == j) | ((i + 1) == j)
+    sparsity = jsparse.BCOO.fromdense(sparsity)
+    
+    with self.subTest():
+      result = sparsejac.jacrev(fn, sparsity, argnums=0)(x, y, z)
+      expected = jax.jacrev(fn, argnums=0)(x, y, z)
+      onp.testing.assert_array_equal(expected, result.todense())
+
+    with self.subTest():
+      result = sparsejac.jacrev(fn, sparsity, argnums=1)(x, y, z)
+      expected = jax.jacrev(fn, argnums=1)(x, y, z)
+      onp.testing.assert_array_equal(expected, result.todense())
+
+    with self.subTest():
+      result = sparsejac.jacrev(fn, sparsity, argnums=2)(x, y, z)
+      expected = jax.jacrev(fn, argnums=2)(x, y, z)
+      onp.testing.assert_array_equal(expected, result.todense())
+
+  def test_has_aux(self):
+
+    def fn(x):
+      convolved = jnp.convolve(x, jnp.asarray([1., -2., 1.]), mode='same')**2
+      aux = x + 1
+      return convolved, aux
+    
+    x = jax.random.uniform(jax.random.PRNGKey(0), shape=(_SIZE,))
+    i, j = jnp.meshgrid(jnp.arange(_SIZE), jnp.arange(_SIZE), indexing='ij')
+    sparsity = (i == j) | ((i - 1) == j) | ((i + 1) == j)
+    sparsity = jsparse.BCOO.fromdense(sparsity)
+
+    result_jac, result_aux = sparsejac.jacrev(fn, sparsity, has_aux=True)(x)
+    expected_jac, expected_aux = jax.jacrev(fn, has_aux=True)(x)
+    onp.testing.assert_array_equal(expected_jac, result_jac.todense())
+    onp.testing.assert_array_equal(expected_aux, result_aux)
+
 
 class JacfwdTest(unittest.TestCase):
 
@@ -159,6 +211,12 @@ class JacfwdTest(unittest.TestCase):
     with self.assertRaisesRegex(
         ValueError, 'Got an invalid compressed Jacobian shape, which can '):
       jacfn(jnp.ones(_SIZE))
+
+  def test_argnums_validation(self):
+    with self.assertRaisesRegex(
+        ValueError, '`argnums` must be an integer, but got'):
+      sparsity = jsparse.BCOO.fromdense(jnp.eye(_SIZE))
+      sparsejac.jacfwd(lambda x: x, sparsity, argnums=(0, 1))
 
   def test_diagonal(self):
     fn = lambda x: x**2
@@ -238,6 +296,53 @@ class JacfwdTest(unittest.TestCase):
     sparsity = jsparse.BCOO.fromdense(expected != 0)
     actual = sparsejac.jacfwd(fn, sparsity)(x_flat)
     onp.testing.assert_array_equal(expected, actual.todense())
+
+  def test_argnums(self):
+
+    def fn(x, y, z):
+      convolved = jnp.convolve(x, jnp.asarray([1., -2., 1.]), mode='same')**2
+      return y * convolved + z
+    
+    x = jax.random.uniform(jax.random.PRNGKey(0), shape=(_SIZE,))
+    y = jax.random.uniform(jax.random.PRNGKey(1), shape=(_SIZE,))
+    z = jax.random.uniform(jax.random.PRNGKey(2), shape=(_SIZE,))
+
+    i, j = jnp.meshgrid(jnp.arange(_SIZE), jnp.arange(_SIZE), indexing='ij')
+    sparsity = (i == j) | ((i - 1) == j) | ((i + 1) == j)
+    sparsity = jsparse.BCOO.fromdense(sparsity)
+    
+    with self.subTest():
+      result = sparsejac.jacfwd(fn, sparsity, argnums=0)(x, y, z)
+      expected = jax.jacfwd(fn, argnums=0)(x, y, z)
+      onp.testing.assert_array_equal(expected, result.todense())
+
+    with self.subTest():
+      result = sparsejac.jacfwd(fn, sparsity, argnums=1)(x, y, z)
+      expected = jax.jacfwd(fn, argnums=1)(x, y, z)
+      onp.testing.assert_array_equal(expected, result.todense())
+
+    with self.subTest():
+      result = sparsejac.jacfwd(fn, sparsity, argnums=2)(x, y, z)
+      expected = jax.jacfwd(fn, argnums=2)(x, y, z)
+      onp.testing.assert_array_equal(expected, result.todense())
+
+  def test_has_aux(self):
+
+    def fn(x):
+      convolved = jnp.convolve(x, jnp.asarray([1., -2., 1.]), mode='same')**2
+      aux = x + 1
+      return convolved, aux
+    
+    x = jax.random.uniform(jax.random.PRNGKey(0), shape=(_SIZE,))
+    i, j = jnp.meshgrid(jnp.arange(_SIZE), jnp.arange(_SIZE), indexing='ij')
+    sparsity = (i == j) | ((i - 1) == j) | ((i + 1) == j)
+    sparsity = jsparse.BCOO.fromdense(sparsity)
+
+    result_jac, result_aux = sparsejac.jacfwd(fn, sparsity, has_aux=True)(x)
+    expected_jac, expected_aux = jax.jacfwd(fn, has_aux=True)(x)
+    onp.testing.assert_array_equal(expected_jac, result_jac.todense())
+    onp.testing.assert_array_equal(expected_aux, result_aux)
+
 
 class ConnectivityFromSparsityTest(unittest.TestCase):
   

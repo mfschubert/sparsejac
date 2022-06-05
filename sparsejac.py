@@ -15,28 +15,38 @@ _DEFAULT_COLORING_STRATEGY = 'largest_first'
 
 
 def jacrev(
-    fn: Callable[[jnp.ndarray], jnp.ndarray],
+    fn: Callable,
     sparsity: jax.experimental.sparse.BCOO,
+    argnums: int = 0,
+    has_aux: bool = False,
+    holomorphic: bool = False,
+    allow_int: bool = False,
     coloring_strategy: str = _DEFAULT_COLORING_STRATEGY,
-) -> Callable[[jnp.ndarray], jnp.ndarray]:
+) -> Callable:
   """Returns a function which computes the Jacobian of `fn` using reverse mode.
 
   This function uses reverse-mode automatic differentiation to compute the
   Jacobian. The `fn` must accept a rank-1 array and return a rank-1 array, and
   the Jacobian should be sparse with nonzero elements identified by `sparsity`.
   Sparsity is exploited in order to make the Jacobian computation efficient.
-
+  
   This is done by identifying "structurally independent" groups of output
   elements, which is isomorphic to a graph coloring problem. This allows
   project to a lower-dimensional output space, so that reverse-mode
   differentiation can be more efficiently applied.
 
   Args:
-    fn: The function for which the sparse Jacobian is sought. Inputs to `fn`
-      should be rank-1 with size equal to the number of columns in `sparsity`.
-      Outputs should be rank-1 with size equal to the number of rows.
+    fn: The function for which the sparse Jacobian is sought. The function can
+      have several inputs, one of which is to be differentiated with respect to.
+      The argument top be differentiated with respect to should be a rank-1
+      array with size equal to the column count in `sparsity`. The output of
+      `fn` must be rank-1 with size equal to the row count in `sparsity`.
     sparsity: Sparse matrix whose specified elements are at locations where the
       Jacobian is nonzero. Note that the values of `sparsity` are not used.
+    argnums: Specifies the positional argument to differentiate with respect to.
+    has_aux: See `jax.jacrev`.
+    holomorphic: See `jax.jacrev`.
+    allow_int: See `jax.jacrev`.
     coloring_strategy: See `networkx.algorithms.coloring.greedy_color`.
 
   Returns:
@@ -49,6 +59,9 @@ def jacrev(
     raise ValueError(
         f'`sparsity.n_sparse` must be 2, but got a value of '
         f'{sparsity.n_sparse}.')
+  if not isinstance(argnums, int):
+    raise ValueError(
+        f'`argnums` must be an integer, but got {argnums}.')
   
   # Identify the structurally-independent elements of `fn` output, i.e. obtain
   # the coloring of the output. Here we must use `scipy` sparse matrices.
@@ -63,51 +76,76 @@ def jacrev(
       jnp.arange(ncolors)[:, jnp.newaxis] == output_coloring[jnp.newaxis, :])
   projection_matrix = projection_matrix.astype(jnp.float32)
   
-  def jacrev_fn(x):
+  def jacrev_fn(*args):
+    x = args[argnums]
     if x.shape != (sparsity.shape[1],):
       raise ValueError(
           f'`x` must be rank-1 with size matching the number of columns in '
           f'`sparsity`, but got shape {x.shape} when `sparsity` has shape '
           f'{sparsity.shape}.')
     
-    def _projected_fn(x):
-      y = fn(x)
+    def _projected_fn(*args):
+      y = fn(*args)
+      if has_aux:
+        y, aux = y
       if y.shape != (sparsity.shape[0],):
         raise ValueError(
             f'`fn(x)` must be rank-1 with size matching the number of rows in '
             f'`sparsity`, but got shape {y.shape} when `sparsity` has shape '
             f'{sparsity.shape}.')
-      return projection_matrix @ y
+      if has_aux:
+        return projection_matrix @ y, aux
+      else:
+        return projection_matrix @ y 
 
-    compressed_jac = jax.jacrev(_projected_fn)(x)
-    return _expand_jacrev_jac(compressed_jac, output_coloring, sparsity)
+    compressed_jac_with_maybe_aux = jax.jacrev(
+        _projected_fn,
+        argnums=argnums,
+        has_aux=has_aux,
+        holomorphic=holomorphic,
+        allow_int=allow_int)(*args)
+
+    if has_aux:
+      compressed_jac, aux = compressed_jac_with_maybe_aux
+      return _expand_jacrev_jac(compressed_jac, output_coloring, sparsity), aux
+    else:
+      compressed_jac = compressed_jac_with_maybe_aux
+      return _expand_jacrev_jac(compressed_jac, output_coloring, sparsity)
 
   return jacrev_fn
 
 
 def jacfwd(
-    fn: Callable[[jnp.ndarray], jnp.ndarray],
+    fn: Callable,
     sparsity: jax.experimental.sparse.BCOO,
+    argnums: int = 0,
+    has_aux: bool = False,
+    holomorphic: bool = False,
     coloring_strategy: str = _DEFAULT_COLORING_STRATEGY,
-) -> Callable[[jnp.ndarray], jnp.ndarray]:
+) -> Callable:
   """Returns a function which computes the Jacobian of `fn` using forward mode.
 
   This function uses forward-mode automatic differentiation to compute the
   Jacobian. The `fn` must accept a rank-1 array and return a rank-1 array, and
   the Jacobian should be sparse with nonzero elements identified by `sparsity`.
   Sparsity is exploited in order to make the Jacobian computation efficient.
-
+  
   This is done by identifying "structurally independent" groups of input
   elements, which is isomorphic to a graph coloring problem. This allows
   project to a lower-dimensional input space, so that forward-mode
   differentiation can be more efficiently applied.
 
   Args:
-    fn: The function for which the sparse Jacobian is sought. Inputs to `fn`
-      should be rank-1 with size equal to the number of columns in `sparsity`.
-      Outputs should be rank-1 with size equal to the number of rows.
+    fn: The function for which the sparse Jacobian is sought. The function can
+      have several inputs, one of which is to be differentiated with respect to.
+      The argument top be differentiated with respect to should be a rank-1
+      array with size equal to the column count in `sparsity`. The output of
+      `fn` must be rank-1 with size equal to the row count in `sparsity`.
     sparsity: Sparse matrix whose specified elements are at locations where the
       Jacobian is nonzero. Note that the values of `sparsity` are not used.
+    argnums: Specifies the positional argument to differentiate with respect to.
+    has_aux: See `jax.jacfwd`.
+    holomorphic: See `jax.jacfwd`.
     coloring_strategy: See `networkx.algorithms.coloring.greedy_color`.
 
   Returns:
@@ -120,6 +158,9 @@ def jacfwd(
     raise ValueError(
         f'`sparsity.n_sparse` must be 2, but got a value of '
         f'{sparsity.n_sparse}.')
+  if not isinstance(argnums, int):
+    raise ValueError(
+        f'`argnums` must be an integer, but got {argnums}.')
   
   # Identify the structurally-independent elements of `fn` output, i.e. obtain
   # the coloring of the output. Here we must use `scipy` sparse matrices.
@@ -134,15 +175,25 @@ def jacfwd(
       jnp.arange(ncolors)[jnp.newaxis, :] == input_coloring[:, jnp.newaxis])
   basis = basis.astype(jnp.float32)
   
-  def jacfwd_fn(x):
+  def jacfwd_fn(*args):
+    x = args[argnums]
     if x.shape != (sparsity.shape[1],):
       raise ValueError(
           f'`x` must be rank-1 with size matching the number of columns in '
           f'`sparsity`, but got shape {x.shape} when `sparsity` has shape '
           f'{sparsity.shape}.')
 
-    _jvp = lambda s: jax.jvp(fn, (x,), (s,))[1]
-    compressed_jac_transpose = jax.vmap(_jvp, in_axes=1)(basis)
+    def _fn(x):
+      args_with_x = args[:argnums] + (x,) + args[argnums + 1:]
+      return fn(*args_with_x)
+
+    if has_aux:
+      _jvp_fn = lambda s: jax.jvp(_fn, (x,), (s,), has_aux=True)[1:]
+      compressed_jac_transpose, aux = jax.vmap(
+          _jvp_fn, in_axes=1, out_axes=(0, None))(basis)
+    else:
+      _jvp_fn = lambda s: jax.jvp(_fn, (x,), (s,), has_aux=False)[1]
+      compressed_jac_transpose = jax.vmap(_jvp_fn, in_axes=1)(basis)
     compressed_jac = compressed_jac_transpose.T
 
     if compressed_jac.shape != (sparsity.shape[0], ncolors):
@@ -152,9 +203,17 @@ def jacfwd(
           f'`sparsity`. Compressed Jacobian shape is {compressed_jac.shape} '
           f'when `sparsity` has shape {sparsity.shape}.')
 
-    return _expand_jacfwd_jac(compressed_jac, input_coloring, sparsity)
+    if has_aux:
+      return _expand_jacfwd_jac(compressed_jac, input_coloring, sparsity), aux
+    else:
+      return _expand_jacfwd_jac(compressed_jac, input_coloring, sparsity)
 
   return jacfwd_fn
+
+
+# ------------------------------------------------------------------------------
+# Private utility functions follow.
+# ------------------------------------------------------------------------------
 
 
 def _output_connectivity_from_sparsity(
