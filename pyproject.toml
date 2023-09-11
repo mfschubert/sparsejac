@@ -27,6 +27,7 @@ dependencies = [
 tests = [
     "parameterized",
     "pytest",
+    "pytest-cov",
 ]
 dev = [
     "bump-my-version",
