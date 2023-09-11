@@ -38,21 +38,21 @@ def jacrev(
     differentiation can be more efficiently applied.
 
     Args:
-      fn: The function for which the sparse Jacobian is sought. The function can
-        have several inputs, one of which is to be differentiated with respect to.
-        The argument top be differentiated with respect to should be a rank-1
-        array with size equal to the column count in `sparsity`. The output of
-        `fn` must be rank-1 with size equal to the row count in `sparsity`.
-      sparsity: Sparse matrix whose specified elements are at locations where the
-        Jacobian is nonzero. Note that the values of `sparsity` are not used.
-      argnums: Specifies the positional argument to differentiate with respect to.
-      has_aux: See `jax.jacrev`.
-      holomorphic: See `jax.jacrev`.
-      allow_int: See `jax.jacrev`.
-      coloring_strategy: See `networkx.algorithms.coloring.greedy_color`.
+        fn: The function for which the sparse Jacobian is sought. The function can
+            have several inputs, one of which is to be differentiated with respect to.
+            The argument top be differentiated with respect to should be a rank-1
+            array with size equal to the column count in `sparsity`. The output of
+            `fn` must be rank-1 with size equal to the row count in `sparsity`.
+        sparsity: Sparse matrix whose specified elements are at locations where the
+            Jacobian is nonzero. Note that the values of `sparsity` are not used.
+        argnums: Specifies the positional argument to differentiate with respect to.
+        has_aux: See `jax.jacrev`.
+        holomorphic: See `jax.jacrev`.
+        allow_int: See `jax.jacrev`.
+        coloring_strategy: See `networkx.algorithms.coloring.greedy_color`.
 
     Returns:
-      The function which computes the sparse Jacobian.
+        The function which computes the sparse Jacobian.
     """
     if sparsity.ndim != 2:
         raise ValueError(
@@ -144,19 +144,19 @@ def jacfwd(
     differentiation can be more efficiently applied.
 
     Args:
-      fn: The function for which the sparse Jacobian is sought. The function can
-        have several inputs, one of which is to be differentiated with respect to.
-        The argument top be differentiated with respect to should be a rank-1
-        array with size equal to the column count in `sparsity`. The output of
-        `fn` must be rank-1 with size equal to the row count in `sparsity`.
-      sparsity: Sparse matrix whose specified elements are at locations where the
-        Jacobian is nonzero. Note that the values of `sparsity` are not used.
-      argnums: Specifies the positional argument to differentiate with respect to.
-      has_aux: See `jax.jacfwd`.
-      coloring_strategy: See `networkx.algorithms.coloring.greedy_color`.
+        fn: The function for which the sparse Jacobian is sought. The function can
+            have several inputs, one of which is to be differentiated with respect to.
+            The argument top be differentiated with respect to should be a rank-1
+            array with size equal to the column count in `sparsity`. The output of
+            `fn` must be rank-1 with size equal to the row count in `sparsity`.
+        sparsity: Sparse matrix whose specified elements are at locations where the
+            Jacobian is nonzero. Note that the values of `sparsity` are not used.
+        argnums: Specifies the positional argument to differentiate with respect to.
+        has_aux: See `jax.jacfwd`.
+        coloring_strategy: See `networkx.algorithms.coloring.greedy_color`.
 
     Returns:
-      The function which computes the sparse Jacobian.
+        The function which computes the sparse Jacobian.
     """
     if sparsity.ndim != 2:
         raise ValueError(
@@ -205,7 +205,7 @@ def jacfwd(
             compressed_jac_transpose, aux = jax.vmap(
                 _jvp_fn_with_aux, in_axes=1, out_axes=(0, None)
             )(basis)
-            
+
         else:
 
             def _jvp_fn(tangents: jnp.ndarray) -> jnp.ndarray:
@@ -240,11 +240,11 @@ def _output_connectivity_from_sparsity(sparsity: ssparse.spmatrix) -> ssparse.sp
     """Computes the connectivity of output elements, given a Jacobian sparsity.
 
     Args:
-      sparsity: Sparse matrix whose specified elements are at locations where the
-        Jacobian is nonzero.
+        sparsity: Sparse matrix whose specified elements are at locations where the
+            Jacobian is nonzero.
 
     Returns:
-      The sparse connectivity matrix for the output elements.
+        The sparse connectivity matrix for the output elements.
     """
     assert sparsity.ndim == 2
     return (sparsity @ sparsity.T).astype(bool)
@@ -254,11 +254,11 @@ def _input_connectivity_from_sparsity(sparsity: ssparse.spmatrix) -> ssparse.spm
     """Computes the connectivity of input elements, given a Jacobian sparsity.
 
     Args:
-      sparsity: Sparse matrix whose specified elements are at locations where the
-        Jacobian is nonzero.
+        sparsity: Sparse matrix whose specified elements are at locations where the
+            Jacobian is nonzero.
 
     Returns:
-      The sparse connectivity matrix for the input elements.
+        The sparse connectivity matrix for the input elements.
     """
     assert sparsity.ndim == 2
     return (sparsity.T @ sparsity).astype(bool)
@@ -271,11 +271,11 @@ def _greedy_color(
     """Wraps `networkx.algorithms.coloring.greedy_color`.
 
     Args:
-      connectivity: Sparse matrix giving the connectivity.
-      strategy: The coloring strategy. See `networkx` documentation for details.
+        connectivity: Sparse matrix giving the connectivity.
+        strategy: The coloring strategy. See `networkx` documentation for details.
 
     Returns:
-      A tuple containing the coloring vector and the number of colors used.
+        A tuple containing the coloring vector and the number of colors used.
     """
     assert connectivity.ndim == 2
     assert connectivity.shape[0] == connectivity.shape[1]
@@ -294,13 +294,13 @@ def _expand_jacrev_jac(
     """Expands an output-compressed Jacobian into a sparse matrix.
 
     Args:
-      compressed_jac: The compressed Jacobian.
-      output_coloring: Coloring of the output elements.
-      sparsity: Sparse matrix whose specified elements are at locations where the
-        Jacobian is nonzero.
+        compressed_jac: The compressed Jacobian.
+        output_coloring: Coloring of the output elements.
+        sparsity: Sparse matrix whose specified elements are at locations where the
+            Jacobian is nonzero.
 
     Returns:
-      The sparse Jacobian matrix.
+        The sparse Jacobian matrix.
     """
     assert compressed_jac.ndim == 2
     assert output_coloring.ndim == 1
@@ -319,13 +319,13 @@ def _expand_jacfwd_jac(
     """Expands an input-compressed Jacobian into a sparse matrix.
 
     Args:
-      compressed_jac: The compressed Jacobian.
-      input_coloring: Coloring of the input elements.
-      sparsity: Sparse matrix whose specified elements are at locations where the
-        Jacobian is nonzero.
+        compressed_jac: The compressed Jacobian.
+        input_coloring: Coloring of the input elements.
+        sparsity: Sparse matrix whose specified elements are at locations where the
+            Jacobian is nonzero.
 
     Returns:
-      The sparse Jacobian matrix.
+        The sparse Jacobian matrix.
     """
     assert compressed_jac.ndim == 2
     assert input_coloring.ndim == 1
