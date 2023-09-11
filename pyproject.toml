@@ -17,6 +17,7 @@ maintainers = [
 
 dependencies = [
     "jax",
+    "jaxlib",
     "networkx",
     "numpy",
     "scipy",
