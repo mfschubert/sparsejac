@@ -69,4 +69,4 @@ jobs:
 
       - name: Run Python tests
         run: |
-          pytest tests/
+          pytest --cov=sparsejac tests
