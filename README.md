@@ -1,8 +1,14 @@
-# sparsejac
+# sparsejac 0.0.0
 Efficient forward- and reverse-mode sparse Jacobians using Jax.
 
 Sparse Jacobians are frequently encountered in the simulation of physical systems. Jax tranformations `jacfwd` and `jacrev` make it easy to compute dense Jacobians, but these are wasteful when the Jacobian is sparse. `sparsejac` provides a function to more efficiently compute the Jacobian if its sparsity is known. It makes use of the recently-introduced `jax.experimental.sparse` module.
 
+## Install
+```
+pip install sparsejac
+```
+
+## Example
 A trivial example with a diagonal Jacobian follows:
 
 ```python
