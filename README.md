@@ -13,21 +13,26 @@ A trivial example with a diagonal Jacobian follows:
 
 ```python
 fn = lambda x: x**2
-sparsity = jax.experimental.sparse.BCOO.fromdense(jnp.eye(10000))
 x = jax.random.uniform(jax.random.PRNGKey(0), shape=(10000,))
 
-sparse_fn = jax.jit(sparsejac.jacrev(fn, sparsity))
-dense_fn = jax.jit(jax.jacrev(fn))
+@jax.jit
+def sparse_jacrev_fn(x):
+  with jax.ensure_compile_time_eval():
+    sparsity = jax.experimental.sparse.BCOO.fromdense(jnp.eye(10000))
+    jacrev_fn = sparsejac.jacrev(fn, sparsity=sparsity)
+  return jacrev_fn(x)
 
-assert jnp.all(sparse_fn(x).todense() == dense_fn(x))
+dense_jacrev_fn = jax.jit(jax.jacrev(fn))
 
-%timeit sparse_fn(x).block_until_ready()
-%timeit dense_fn(x).block_until_ready()
+assert jnp.all(sparse_jacrev_fn(x).todense() == dense_jacrev_fn(x))
+
+%timeit sparse_jacrev_fn(x).block_until_ready()
+%timeit dense_jacrev_fn(x).block_until_ready()
 ```
 
 And, the performance improvement can easily be seen:
 
 ```
-10000 loops, best of 5: 96.5 µs per loop
-10 loops, best of 5: 56.9 ms per loop
+93.1 µs ± 17.2 µs per loop (mean ± std. dev. of 7 runs, 10000 loops each)
+182 ms ± 26.9 ms per loop (mean ± std. dev. of 7 runs, 10 loops each)
 ```
