@@ -1,7 +1,7 @@
 [project]
 
 name = "sparsejac"
-version = "0.1.1"
+version = "v0.1.1"
 description = "Efficient forward- and reverse-mode sparse Jacobians using Jax."
 keywords = ["jax", "jacobian", "sparse"]
 readme = "README.md"
