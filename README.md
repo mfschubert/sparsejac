@@ -36,3 +36,9 @@ And, the performance improvement can easily be seen:
 93.1 µs ± 17.2 µs per loop (mean ± std. dev. of 7 runs, 10000 loops each)
 182 ms ± 26.9 ms per loop (mean ± std. dev. of 7 runs, 10 loops each)
 ```
+
+## Performance
+
+- In general, it is preferable to directly provide the sparsity, rather than obtaining it from a dense matrix.
+- GPU may show minimal or no performance advantage over CPU.
+- Users are encouraged to test `jacrev` and `jacfwd` on their specific problem to select the most performant option.
