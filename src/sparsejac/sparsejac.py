@@ -1,6 +1,5 @@
 """Defines functions for efficient computation of sparse Jacobians."""
 
-import functools
 from typing import Any, Callable, Tuple, Union
 
 import jax
