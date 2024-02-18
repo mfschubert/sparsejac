@@ -195,11 +195,23 @@ def jacfwd(
             return fn(*args_with_x)
 
         if has_aux:
-            _, jvp_fn, aux = jax.linearize(_fn, x, has_aux=True)
-        else:
-            _, jvp_fn = jax.linearize(_fn, x, has_aux=False)
 
-        compressed_jac_transpose = jax.vmap(jvp_fn, in_axes=1)(basis)
+            def _jvp_fn_with_aux(tangents: jnp.ndarray) -> Tuple[jnp.ndarray, Any]:
+                _, tangents_out, aux = jax.jvp(_fn, (x,), (tangents,), has_aux=True)
+                return tangents_out, aux
+
+            compressed_jac_transpose, aux = jax.vmap(
+                _jvp_fn_with_aux, in_axes=1, out_axes=(0, None)
+            )(basis)
+
+        else:
+
+            def _jvp_fn(tangents: jnp.ndarray) -> jnp.ndarray:
+                _, tangents_out = jax.jvp(_fn, (x,), (tangents,), has_aux=False)
+                return tangents_out
+
+            compressed_jac_transpose = jax.vmap(_jvp_fn, in_axes=1)(basis)
+
         compressed_jac = compressed_jac_transpose.T
         if compressed_jac.shape != (sparsity.shape[0], ncolors):
             raise ValueError(
