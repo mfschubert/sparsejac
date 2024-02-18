@@ -3,5 +3,5 @@
 __version__ = "0.1.0"
 __author__ = "Martin Schubert <mfschubert@gmail.com>"
 
-from sparsejac.sparsejac import jacrev as jacrev
 from sparsejac.sparsejac import jacfwd as jacfwd
+from sparsejac.sparsejac import jacrev as jacrev

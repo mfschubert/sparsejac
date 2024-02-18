@@ -9,7 +9,6 @@ import networkx
 import numpy as onp
 import scipy.sparse as ssparse
 
-
 # Coloring strategy employed to find structurally-independent output elements.
 _DEFAULT_COLORING_STRATEGY = "largest_first"
 
@@ -79,7 +78,6 @@ def jacrev(
     projection_matrix = (
         jnp.arange(ncolors)[:, jnp.newaxis] == output_coloring[jnp.newaxis, :]
     )
-    projection_matrix = projection_matrix.astype(jnp.float32)
 
     def jacrev_fn(*args: Any) -> ArrayWithOptionalAux:
         x = args[argnums]
@@ -181,7 +179,7 @@ def jacfwd(
     assert input_coloring.size == sparsity.shape[1]
 
     basis = jnp.arange(ncolors)[jnp.newaxis, :] == input_coloring[:, jnp.newaxis]
-    basis = basis.astype(jnp.float32)
+    basis = basis.astype(float)
 
     def jacfwd_fn(*args: Any) -> ArrayWithOptionalAux:
         x = args[argnums]
@@ -213,8 +211,8 @@ def jacfwd(
                 return tangents_out
 
             compressed_jac_transpose = jax.vmap(_jvp_fn, in_axes=1)(basis)
-        compressed_jac = compressed_jac_transpose.T
 
+        compressed_jac = compressed_jac_transpose.T
         if compressed_jac.shape != (sparsity.shape[0], ncolors):
             raise ValueError(
                 f"Got an invalid compressed Jacobian shape, which can occur if "
