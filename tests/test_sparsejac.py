@@ -1,14 +1,14 @@
 """Tests for `sparsejac`."""
 
+import unittest
+
 import jax
 import jax.experimental.sparse as jsparse
 import jax.numpy as jnp
 import numpy as onp
 import scipy.sparse as ssparse
-import unittest
 
 from sparsejac import sparsejac
-
 
 _SIZE = 50
 
