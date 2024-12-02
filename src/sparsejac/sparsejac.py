@@ -79,7 +79,7 @@ def jacrev(
         jnp.arange(ncolors)[:, jnp.newaxis] == output_coloring[jnp.newaxis, :]
     )
 
-    def jacrev_fn(*args: Any) -> ArrayWithOptionalAux:
+    def jacrev_fn(*args: Any, **kwargs: Any) -> ArrayWithOptionalAux:
         x = args[argnums]
         if x.shape != (sparsity.shape[1],):
             raise ValueError(
@@ -88,11 +88,11 @@ def jacrev(
                 f"{sparsity.shape}."
             )
 
-        def _projected_fn(*args: Any) -> ArrayWithOptionalAux:
+        def _projected_fn(*args: Any, **kwargs: Any) -> ArrayWithOptionalAux:
             if has_aux:
-                y, aux = fn(*args)
+                y, aux = fn(*args, **kwargs)
             else:
-                y = fn(*args)
+                y = fn(*args, **kwargs)
             if y.shape != (sparsity.shape[0],):
                 raise ValueError(
                     f"`fn(x)` must be rank-1 with size matching the number of rows in "
@@ -110,7 +110,7 @@ def jacrev(
             has_aux=has_aux,
             holomorphic=holomorphic,
             allow_int=allow_int,
-        )(*args)
+        )(*args, **kwargs)
 
         if has_aux:
             compressed_jac, aux = compressed_jac_with_maybe_aux
@@ -181,7 +181,7 @@ def jacfwd(
     basis = jnp.arange(ncolors)[jnp.newaxis, :] == input_coloring[:, jnp.newaxis]
     basis = basis.astype(float)
 
-    def jacfwd_fn(*args: Any) -> ArrayWithOptionalAux:
+    def jacfwd_fn(*args: Any, **kwargs: Any) -> ArrayWithOptionalAux:
         x = args[argnums]
         if x.shape != (sparsity.shape[1],):
             raise ValueError(
@@ -192,7 +192,7 @@ def jacfwd(
 
         def _fn(x: jnp.ndarray) -> ArrayWithOptionalAux:
             args_with_x = args[:argnums] + (x,) + args[argnums + 1 :]
-            return fn(*args_with_x)
+            return fn(*args_with_x, **kwargs)
 
         if has_aux:
 
