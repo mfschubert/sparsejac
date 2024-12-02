@@ -181,6 +181,19 @@ class JacrevTest(unittest.TestCase):
         onp.testing.assert_array_equal(expected_jac, result_jac.todense())
         onp.testing.assert_array_equal(expected_aux, result_aux)
 
+    def test_kwargs(self):
+        def fn(x, y):
+            return y * jnp.convolve(x, jnp.asarray([1.0, -2.0, 1.0]), mode="same") ** 2
+
+        x = jax.random.uniform(jax.random.PRNGKey(0), shape=(_SIZE,))
+        i, j = jnp.meshgrid(jnp.arange(_SIZE), jnp.arange(_SIZE), indexing="ij")
+        sparsity = (i == j) | ((i - 1) == j) | ((i + 1) == j)
+        sparsity = jsparse.BCOO.fromdense(sparsity)
+
+        result_jac = sparsejac.jacrev(fn, sparsity)(x, y=1)
+        expected_jac = jax.jacrev(fn)(x, y=1)
+        onp.testing.assert_array_equal(expected_jac, result_jac.todense())
+
 
 class JacfwdTest(unittest.TestCase):
     def test_sparsity_shape_validation(self):
@@ -349,6 +362,19 @@ class JacfwdTest(unittest.TestCase):
         expected_jac, expected_aux = jax.jacfwd(fn, has_aux=True)(x)
         onp.testing.assert_array_equal(expected_jac, result_jac.todense())
         onp.testing.assert_array_equal(expected_aux, result_aux)
+
+    def test_kwargs(self):
+        def fn(x, y):
+            return y * jnp.convolve(x, jnp.asarray([1.0, -2.0, 1.0]), mode="same") ** 2
+
+        x = jax.random.uniform(jax.random.PRNGKey(0), shape=(_SIZE,))
+        i, j = jnp.meshgrid(jnp.arange(_SIZE), jnp.arange(_SIZE), indexing="ij")
+        sparsity = (i == j) | ((i - 1) == j) | ((i + 1) == j)
+        sparsity = jsparse.BCOO.fromdense(sparsity)
+
+        result_jac = sparsejac.jacfwd(fn, sparsity)(x, y=1)
+        expected_jac = jax.jacfwd(fn)(x, y=1)
+        onp.testing.assert_array_equal(expected_jac, result_jac.todense())
 
 
 class ConnectivityFromSparsityTest(unittest.TestCase):
