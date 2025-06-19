@@ -3,6 +3,8 @@
 
 Sparse Jacobians are frequently encountered in the simulation of physical systems. Jax tranformations `jacfwd` and `jacrev` make it easy to compute dense Jacobians, but these are wasteful when the Jacobian is sparse. `sparsejac` provides a function to more efficiently compute the Jacobian if its sparsity is known. It makes use of the recently-introduced `jax.experimental.sparse` module.
 
+The graph encoding and coloring algorithms used in this package are relatively basic. As an alternative using more advanced schemes, consider [sparsediffax](https://github.com/gdalle/sparsediffax)--an in-development package that leverages Julia packages such as [SparseMatrixColorings.jl](https://github.com/gdalle/SparseMatrixColorings.jl).
+
 ## Install
 ```
 pip install sparsejac
