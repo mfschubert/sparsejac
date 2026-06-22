@@ -429,5 +429,159 @@ class ConnectivityFromSparsityTest(unittest.TestCase):
         onp.testing.assert_array_equal(expected, actual.todense())
 
 
+class JacrevColoringTest(unittest.TestCase):
+    def _diagonal_sparsity(self) -> jsparse.BCOO:
+        return jsparse.BCOO.fromdense(jnp.eye(_SIZE))
+
+    def test_jacrev_coloring_returns_correct_type(self):
+        sparsity = self._diagonal_sparsity()
+        coloring = sparsejac.jacrev_coloring(sparsity)
+        self.assertIsInstance(coloring, sparsejac.ReverseModeColoring)
+
+    def test_jacrev_coloring_fields(self):
+        sparsity = self._diagonal_sparsity()
+        coloring = sparsejac.jacrev_coloring(sparsity)
+        self.assertEqual(coloring.output_coloring.shape, (sparsity.shape[0],))
+        self.assertGreater(coloring.ncolors, 0)
+        self.assertLessEqual(coloring.ncolors, sparsity.shape[0])
+        onp.testing.assert_array_equal(
+            jnp.unique(coloring.output_coloring).size, coloring.ncolors
+        )
+
+    def test_jacrev_with_precomputed_coloring_matches_sparsity_api(self):
+        fn = lambda x: x**2
+        sparsity = self._diagonal_sparsity()
+        x = jax.random.uniform(jax.random.PRNGKey(0), shape=(_SIZE,))
+        expected = sparsejac.jacrev(fn, sparsity)(x)
+        coloring = sparsejac.jacrev_coloring(sparsity)
+        actual = sparsejac.jacrev(fn, coloring=coloring)(x)
+        onp.testing.assert_array_equal(expected.todense(), actual.todense())
+
+    def test_jacrev_with_precomputed_coloring_jit(self):
+        fn = lambda x: x**2
+        sparsity = self._diagonal_sparsity()
+        x = jax.random.uniform(jax.random.PRNGKey(0), shape=(_SIZE,))
+        coloring = sparsejac.jacrev_coloring(sparsity)
+
+        @jax.jit
+        def jacrev_sparse(x, coloring):
+            jacfn = sparsejac.jacrev(fn, coloring=coloring)
+            return jacfn(x)
+        
+        jac = jacrev_sparse(x, coloring)
+        onp.testing.assert_array_equal(jax.jacrev(fn)(x), jac.todense())
+
+    def test_jacrev_neither_sparsity_nor_coloring_raises(self):
+        with self.assertRaisesRegex(ValueError, "Exactly one of"):
+            sparsejac.jacrev(lambda x: x)
+
+    def test_jacrev_both_sparsity_and_coloring_raises(self):
+        sparsity = self._diagonal_sparsity()
+        coloring = sparsejac.jacrev_coloring(sparsity)
+        with self.assertRaisesRegex(ValueError, "not both"):
+            sparsejac.jacrev(lambda x: x, sparsity, coloring=coloring)
+
+    def test_jacrev_coloring_sparsity_shape_validation(self):
+        with self.assertRaisesRegex(ValueError, "`sparsity` must be rank-2"):
+            invalid_sparsity = jsparse.BCOO.fromdense(jnp.ones((5, 5, 5)))
+            sparsejac.jacrev_coloring(invalid_sparsity)
+
+    def test_jacrev_coloring_accepts_scipy_sparse(self):
+        import scipy.sparse as ssparse
+
+        sparsity_scipy = ssparse.eye(_SIZE, format="coo")
+        coloring = sparsejac.jacrev_coloring(sparsity_scipy)
+        self.assertIsInstance(coloring, sparsejac.ReverseModeColoring)
+        self.assertEqual(coloring.output_coloring.shape, (_SIZE,))
+
+    def test_jacrev_with_scipy_coloring_matches_jax_coloring(self):
+        import scipy.sparse as ssparse
+
+        fn = lambda x: x**2
+        sparsity_bcoo = self._diagonal_sparsity()
+        sparsity_scipy = ssparse.eye(_SIZE, format="coo")
+        x = jax.random.uniform(jax.random.PRNGKey(0), shape=(_SIZE,))
+        result_bcoo = sparsejac.jacrev(fn, coloring=sparsejac.jacrev_coloring(sparsity_bcoo))(x)
+        result_scipy = sparsejac.jacrev(fn, coloring=sparsejac.jacrev_coloring(sparsity_scipy))(x)
+        onp.testing.assert_array_equal(result_bcoo.todense(), result_scipy.todense())
+
+
+class JacfwdColoringTest(unittest.TestCase):
+    def _diagonal_sparsity(self) -> jsparse.BCOO:
+        return jsparse.BCOO.fromdense(jnp.eye(_SIZE))
+
+    def test_jacfwd_coloring_returns_correct_type(self):
+        sparsity = self._diagonal_sparsity()
+        coloring = sparsejac.jacfwd_coloring(sparsity)
+        self.assertIsInstance(coloring, sparsejac.ForwardModeColoring)
+
+    def test_jacfwd_coloring_fields(self):
+        sparsity = self._diagonal_sparsity()
+        coloring = sparsejac.jacfwd_coloring(sparsity)
+        self.assertEqual(coloring.input_coloring.shape, (sparsity.shape[1],))
+        self.assertGreater(coloring.ncolors, 0)
+        self.assertLessEqual(coloring.ncolors, sparsity.shape[1])
+        onp.testing.assert_array_equal(
+            jnp.unique(coloring.input_coloring).size, coloring.ncolors
+        )
+
+    def test_jacfwd_with_precomputed_coloring_matches_sparsity_api(self):
+        fn = lambda x: x**2
+        sparsity = self._diagonal_sparsity()
+        x = jax.random.uniform(jax.random.PRNGKey(0), shape=(_SIZE,))
+        expected = sparsejac.jacfwd(fn, sparsity)(x)
+        coloring = sparsejac.jacfwd_coloring(sparsity)
+        actual = sparsejac.jacfwd(fn, coloring=coloring)(x)
+        onp.testing.assert_array_equal(expected.todense(), actual.todense())
+
+    def test_jacfwd_with_precomputed_coloring_jit(self):
+        fn = lambda x: x**2
+        sparsity = self._diagonal_sparsity()
+        x = jax.random.uniform(jax.random.PRNGKey(0), shape=(_SIZE,))
+        coloring = sparsejac.jacfwd_coloring(sparsity)
+
+        @jax.jit
+        def jacfwd_sparse(x, coloring):
+            jacfn = sparsejac.jacfwd(fn, coloring=coloring)
+            return jacfn(x)
+        
+        jac = jacfwd_sparse(x, coloring)
+        onp.testing.assert_array_equal(jax.jacrev(fn)(x), jac.todense())
+
+    def test_jacfwd_neither_sparsity_nor_coloring_raises(self):
+        with self.assertRaisesRegex(ValueError, "Exactly one of"):
+            sparsejac.jacfwd(lambda x: x)
+
+    def test_jacfwd_both_sparsity_and_coloring_raises(self):
+        sparsity = self._diagonal_sparsity()
+        coloring = sparsejac.jacfwd_coloring(sparsity)
+        with self.assertRaisesRegex(ValueError, "not both"):
+            sparsejac.jacfwd(lambda x: x, sparsity, coloring=coloring)
+
+    def test_jacfwd_coloring_sparsity_shape_validation(self):
+        with self.assertRaisesRegex(ValueError, "`sparsity` must be rank-2"):
+            invalid_sparsity = jsparse.BCOO.fromdense(jnp.ones((5, 5, 5)))
+            sparsejac.jacfwd_coloring(invalid_sparsity)
+
+    def test_jacfwd_coloring_accepts_scipy_sparse(self):
+        import scipy.sparse as ssparse
+
+        sparsity_scipy = ssparse.eye(_SIZE, format="coo")
+        coloring = sparsejac.jacfwd_coloring(sparsity_scipy)
+        self.assertIsInstance(coloring, sparsejac.ForwardModeColoring)
+        self.assertEqual(coloring.input_coloring.shape, (_SIZE,))
+
+    def test_jacfwd_with_scipy_coloring_matches_jax_coloring(self):
+        import scipy.sparse as ssparse
+
+        fn = lambda x: x**2
+        sparsity_bcoo = self._diagonal_sparsity()
+        sparsity_scipy = ssparse.eye(_SIZE, format="coo")
+        x = jax.random.uniform(jax.random.PRNGKey(0), shape=(_SIZE,))
+        result_bcoo = sparsejac.jacfwd(fn, coloring=sparsejac.jacfwd_coloring(sparsity_bcoo))(x)
+        result_scipy = sparsejac.jacfwd(fn, coloring=sparsejac.jacfwd_coloring(sparsity_scipy))(x)
+        onp.testing.assert_array_equal(result_bcoo.todense(), result_scipy.todense())
+
+
 if __name__ == "__main__":
     unittest.main(argv=[""], verbosity=2, exit=False)
